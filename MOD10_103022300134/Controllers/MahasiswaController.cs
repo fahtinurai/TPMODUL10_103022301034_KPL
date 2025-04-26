@@ -1,7 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using MOD10_103022300134.Data;
 using MOD10_103022300134.Models;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+
 
 namespace MOD10_103022300134.Controllers
 {
@@ -9,48 +14,88 @@ namespace MOD10_103022300134.Controllers
     [ApiController]
     public class MahasiswaController : ControllerBase
     {
-        private static List<Mahasiswa> mahasiswaList = new List<Mahasiswa>
-        {
-            new Mahasiswa { Nama = "LeBron James", Nim = "1302000001" },
-            new Mahasiswa { Nama = "Stephen Curry", Nim = "1302000002" }
-        };
+        private readonly AppDbContext _context;
 
-        // GET: api/mahasiswa
+        public MahasiswaController(AppDbContext context)
+        {
+            _context = context;
+        }
+
         [HttpGet]
-        public ActionResult<IEnumerable<Mahasiswa>> Get()
+        public async Task<ActionResult<IEnumerable<Mahasiswa>>> GetMahasiswas()
         {
-            return mahasiswaList;
+            return await _context.Mahasiswas.ToListAsync();
         }
 
-        // GET: api/mahasiswa/{index}
-        [HttpGet("{index}")]
-        public ActionResult<Mahasiswa> Get(int index)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Mahasiswa>> GetMahasiswa(int id)
         {
-            if (index < 0 || index >= mahasiswaList.Count)
+            var mahasiswa = await _context.Mahasiswas.FindAsync(id);
+
+            if (mahasiswa == null)
             {
                 return NotFound();
             }
-            return mahasiswaList[index];
+
+            return mahasiswa;
         }
 
-        // POST: api/mahasiswa
         [HttpPost]
-        public ActionResult Post([FromBody] Mahasiswa mhs)
+        public async Task<ActionResult<Mahasiswa>> PostMahasiswa(Mahasiswa mahasiswa)
         {
-            mahasiswaList.Add(mhs);
-            return Ok();
+            _context.Mahasiswas.Add(mahasiswa);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetMahasiswa), new { id = mahasiswa.Id }, mahasiswa);
         }
 
-        // DELETE: api/mahasiswa/{index}
-        [HttpDelete("{index}")]
-        public ActionResult Delete(int index)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutMahasiswa(int id, Mahasiswa mahasiswa)
         {
-            if (index < 0 || index >= mahasiswaList.Count)
+            if (id != mahasiswa.Id)
+            {
+                return BadRequest();
+            }
+
+            _context.Entry(mahasiswa).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!MahasiswaExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteMahasiswa(int id)
+        {
+            var mahasiswa = await _context.Mahasiswas.FindAsync(id);
+            if (mahasiswa == null)
             {
                 return NotFound();
             }
-            mahasiswaList.RemoveAt(index);
-            return Ok();
+
+            _context.Mahasiswas.Remove(mahasiswa);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool MahasiswaExists(int id)
+        {
+            return _context.Mahasiswas.Any(e => e.Id == id);
         }
     }
 }
